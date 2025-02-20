@@ -1,61 +1,59 @@
-import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
-import { getMint, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import dotenv from "dotenv";
+import bs58 from "bs58";
+import {
+  LAMPORTS_PER_SOL,
+  Transaction,
+  SystemProgram,
+  sendAndConfirmTransaction,
+  Keypair,
+  Connection,
+  PublicKey,
+  clusterApiUrl,
+} from "@solana/web3.js";
 
-async function getAccountInfo(address: string, network: string = "mainnet") {
+dotenv.config();
+
+// Key from .env
+const senderPrivateKeyString = process.env.SENDER_WALLET_PRIVATE_KEY as string;
+const receiverPublicKeyString = process.env
+  .RECEIVER_WALLET_PUBLIC_KEY as string;
+
+// Get sender Keypair
+// const senderSecretKey = JSON.parse(fs.readFileSync('sender-keypair.json', 'utf-8')) as number[];
+// const sender = Keypair.fromSecretKey(new Uint8Array(senderSecretKey));
+const senderSecretKey = bs58.decode(senderPrivateKeyString);
+const sender = Keypair.fromSecretKey(senderSecretKey);
+
+// Get receiver public key
+const receiverPublicKey = new PublicKey(receiverPublicKeyString);
+
+// transferSOL function
+async function transferSOL(network: string = "mainnet") {
   let connection: Connection;
   if (network === "mainnet") {
     connection = new Connection("https://api.mainnet-beta.solana.com");
   } else {
     connection = new Connection(clusterApiUrl("devnet"), "confirmed");
   }
-  const publicKey = new PublicKey(address);
 
-  try {
-    const accountInfo = await connection.getAccountInfo(publicKey);
-    console.log(JSON.stringify(accountInfo, null, 2));
-  } catch (error) {
-    console.error("Error fetching account info:", error);
-  }
+  const trasnferInstruction = SystemProgram.transfer({
+    fromPubkey: sender.publicKey,
+    toPubkey: receiverPublicKey,
+    lamports: 0.01 * LAMPORTS_PER_SOL,
+  });
+
+  const transaction = new Transaction().add(trasnferInstruction);
+
+  const transactionSignature = await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [sender]
+  );
+
+  console.log(
+    "Transaction Signature: ",
+    `https://solscan.io/tx/${transactionSignature}`
+  );
 }
 
-async function getMintInfo(address: string, network: string = "mainnet") {
-  let connection: Connection;
-  if (network === "mainnet") {
-    connection = new Connection("https://api.mainnet-beta.solana.com");
-  } else {
-    connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-  }
-  const publicKey = new PublicKey(address);
-
-  try {
-    const mintInfo = await getMint(
-      connection,
-      publicKey,
-      "confirmed",
-      TOKEN_2022_PROGRAM_ID
-    );
-    console.log(
-      JSON.stringify(
-        mintInfo,
-        (key, value) => {
-          // Convert BigInt to String
-          if (typeof value === "bigint") {
-            return value.toString();
-          }
-          // Handle Buffer objects
-          if (Buffer.isBuffer(value)) {
-            return `<Buffer ${value.toString("hex")}>`;
-          }
-          return value;
-        },
-        2
-      )
-    );
-  } catch (error) {
-    console.error("Error fetching mint info:", error);
-  }
-}
-
-// Get Mint Info with Mint account address
-const mintAccountAddress = "C33qt1dZGZSsqTrHdtLKXPZNoxs6U1ZBfyDkzmj6mXeR";
-getMintInfo(mintAccountAddress, "devnet");
+transferSOL();
