@@ -1,7 +1,13 @@
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
 
-async function getAccountInfo(address: string) {
-  const connection = new Connection("https://api.mainnet-beta.solana.com");
+async function getAccountInfo(address: string, network: string = "mainnet") {
+  let connection: Connection;
+  if( network === "mainnet") {
+    connection = new Connection("https://api.mainnet-beta.solana.com");
+  }
+  else{
+    connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+  }
   const publicKey = new PublicKey(address);
 
   try {
@@ -17,5 +23,9 @@ async function getAccountInfo(address: string) {
 // getAccountInfo(walletAddress);
 
 // Token 2022 Program address
-const tokenProgramAddress = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
-getAccountInfo(tokenProgramAddress);
+// const tokenProgramAddress = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+// getAccountInfo(tokenProgramAddress);
+
+// Mint account address
+const mintAccountAddress = "C33qt1dZGZSsqTrHdtLKXPZNoxs6U1ZBfyDkzmj6mXeR";
+getAccountInfo(mintAccountAddress, "devnet");
