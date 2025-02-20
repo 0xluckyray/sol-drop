@@ -50,10 +50,18 @@ async function transferSOL(network: string = "mainnet") {
     [sender]
   );
 
-  console.log(
-    "Transaction Signature: ",
-    `https://solscan.io/tx/${transactionSignature}`
-  );
+  if(network === "mainnet"){
+    console.log(
+      "Transaction Signature: ",
+      `https://solscan.io/tx/${transactionSignature}`
+    );
+  } else {
+    console.log(
+      "Transaction Signature: ",
+      `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
+    );
+  }
+
 }
 
-transferSOL();
+transferSOL("devnet");
