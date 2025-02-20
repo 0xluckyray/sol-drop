@@ -1,8 +1,8 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
-async function getAccountInfo(walletAddress: string) {
+async function getAccountInfo(address: string) {
   const connection = new Connection("https://api.mainnet-beta.solana.com");
-  const publicKey = new PublicKey(walletAddress);
+  const publicKey = new PublicKey(address);
 
   try {
     const accountInfo = await connection.getAccountInfo(publicKey);
@@ -12,6 +12,10 @@ async function getAccountInfo(walletAddress: string) {
   }
 }
 
-// Replace with your actual wallet address
-const walletAddress = "hYn1ZbfAdhSgwezgVADHR6nNzGWe7F71JGVdFvqk8L3";
-getAccountInfo(walletAddress);
+// My wallet address
+// const walletAddress = "hYn1ZbfAdhSgwezgVADHR6nNzGWe7F71JGVdFvqk8L3";
+// getAccountInfo(walletAddress);
+
+// Token 2022 Program address
+const tokenProgramAddress = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+getAccountInfo(tokenProgramAddress);
