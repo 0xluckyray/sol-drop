@@ -34,6 +34,15 @@ async function transferSOL(network: string = "mainnet") {
     connection = new Connection("https://api.mainnet-beta.solana.com");
   } else {
     connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+
+    // Airdrop some SOL to the sender's wallet for testing
+    const airdropSignature = await connection.requestAirdrop(
+      sender.publicKey,
+      2 * LAMPORTS_PER_SOL
+    );
+
+    // Wait for the airdrop to be confirmed
+    await connection.confirmTransaction(airdropSignature);
   }
 
   const trasnferInstruction = SystemProgram.transfer({
