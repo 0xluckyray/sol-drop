@@ -1,0 +1,129 @@
+Wallet Address: hYn1ZbfAdhSgwezgVADHR6nNzGWe7F71JGVdFvqk8L3
+
+Account Info:
+{
+  "data": {
+    "type": "Buffer",
+    "data": []
+  },
+  "executable": false,
+  "lamports": 101223209,
+  "owner": "11111111111111111111111111111111",
+  "rentEpoch": 18446744073709552000,
+  "space": 0
+}
+
+
+Token 2022 Program Address: TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb
+
+Account Info:
+{
+  "data": {
+    "type": "Buffer",
+    "data": [
+      2,
+      0,
+      0,
+      0,
+      190,
+      51,
+      145,
+      195,
+      15,
+      69,
+      134,
+      171,
+      198,
+      7,
+      157,
+      157,
+      157,
+      235,
+      231,
+      78,
+      23,
+      201,
+      236,
+      115,
+      99,
+      242,
+      110,
+      99,
+      253,
+      155,
+      110,
+      169,
+      190,
+      110,
+      86,
+    ]
+  },
+  "executable": true,
+  "lamports": 1141440,
+  "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+  "rentEpoch": 18446744073709552000,
+}
+
+
+Mint Account Address: C33qt1dZGZSsqTrHdtLKXPZNoxs6U1ZBfyDkzmj6mXeR  (Devnet)
+
+Account Info:
+{
+  "data": {
+    "type": "Buffer",
+    "data": [
+      1,
+      0,
+      0,
+      0,
+      44,
+      91,
+      ...
+      106,
+      115,
+      111,
+      110,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "executable": false,
+  "lamports": 15024176000,
+  "owner": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+  "rentEpoch": 18446744073709552000,
+  "space": 430
+}
+
+
+Deserialized Mint Info: C33qt1dZGZSsqTrHdtLKXPZNoxs6U1ZBfyDkzmj6mXeR  (Devnet)
+
+{
+  "address": "C33qt1dZGZSsqTrHdtLKXPZNoxs6U1ZBfyDkzmj6mXeR",
+  "mintAuthority": "3z9vL1zjN6qyAFHhHQdWYRTFAcy69pJydkZmSFBKHg1R",
+  "supply": "0",
+  "decimals": 2,
+  "isInitialized": true,
+  "freezeAuthority": null,
+  "tlvData": {
+    "type": "Buffer",
+    "data": [
+      18,
+      0,
+      64,
+      0,
+      44,
+      91,
+      144,
+      ...
+      115,
+      111,
+      110,
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+}
