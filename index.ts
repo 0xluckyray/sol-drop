@@ -38,10 +38,14 @@ const toWalletPublicKey = new PublicKey(receiverPublicKeyString);
 // const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // Devnet
 const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // Mainnet
 
-(async () => {
-  // const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-  const connection = new Connection("https://api.mainnet-beta.solana.com");
-
+// transferSplToken function
+async function transferSplToken(network: string = "mainnet") {
+  let connection: Connection;
+  if (network === "mainnet") {
+    connection = new Connection("https://api.mainnet-beta.solana.com");
+  } else {
+    connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+  }
   // Check fromWallet balance
   const fromWalletBalance = await connection.getBalance(fromWallet.publicKey);
   console.log("From Wallet Balance:", fromWalletBalance / LAMPORTS_PER_SOL, "SOL");
@@ -49,28 +53,6 @@ const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // M
   if (fromWalletBalance < 0.01 * LAMPORTS_PER_SOL) {
     throw new Error("From wallet does not have enough SOL to pay for transaction fees.");
   }
-
-  // Generate a wallet keypair and airdrop SOL
-  // const fromWallet = Keypair.generate();
-  // const airdropSignature = await connection.requestAirdrop(
-  //   fromWallet.publicKey,
-  //   LAMPORTS_PER_SOL
-  // );
-
-  // Wait for airdrop cofirmation
-  // await connection.confirmTransaction(airdropSignature);
-
-  // Generate a wallet keypair to receive newly minted token
-  // const toWallet = Keypair.generate();
-
-  // Create new token mint
-  // const mint = await createMint(
-  //   connection,
-  //   fromWallet,
-  //   fromWallet.publicKey,
-  //   null,
-  //   9
-  // );
 
   // Get token mint info (including decimals)
   const mintInfo = await getMint(
@@ -107,17 +89,7 @@ const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // M
     throw new Error("Insufficient funds in the fromTokenAccount.");
   }
 
-  // // Minting 1000 000 000 tokens to the fromTokenAccount we just returned/created
-  // await mintTo(
-  //   connection,
-  //   fromWallet,
-  //   mint,
-  //   fromTokenAccount.address,
-  //   fromWallet.publicKey,
-  //   1000000000 * LAMPORTS_PER_SOL, // it's 1 token, but in lamports
-  //   []
-  // );
-
+  // Token Transfer Instruction
   const transferInstruction = createTransferInstruction(
     fromTokenAccount.address,
     toTokenAccount.address,
@@ -125,14 +97,15 @@ const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // M
     transferAmount * Math.pow(10, mintInfo.decimals)
   );
 
-  // Add priority fee instruction
-  const PRIORITY_FEE_MICRO_LAMPORTS = 100000; // 0.1 lamports per compute unit (adjust as needed)
+  // Priority fee instruction
+  const PRIORITY_FEE_MICRO_LAMPORTS = 200000; // 0.2 lamports per compute unit (adjust as needed)
   // Instruction to set the compute unit price for priority fee
   const PRIORITY_FEE_INSTRUCTIONS = ComputeBudgetProgram.setComputeUnitPrice({microLamports: PRIORITY_FEE_MICRO_LAMPORTS});
 
   // Fetch a fresh blockhash
   const latestBlockhash = await connection.getLatestBlockhash();
   
+  // Compiles and signs the transaction message with the sender's Keypair.
   const messageV0 = new TransactionMessage({
     payerKey: fromWallet.publicKey,
     recentBlockhash: latestBlockhash.blockhash,
@@ -149,10 +122,6 @@ const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // M
     const transactionSignature = await connection.sendTransaction(versionedTransaction, {
       maxRetries: 20,
     });
-    console.log(
-      "Transaction Signature: ",
-      `https://solscan.io/tx/${transactionSignature}`
-    );
 
     const confirmation = await connection.confirmTransaction(
       {
@@ -165,16 +134,22 @@ const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // M
     if (confirmation.value.err) {
       throw new Error("🚨Transaction not confirmed.");
     }
-    console.log(
-      `Transaction Successfully Confirmed! 🎉 View on SolScan: https://solscan.io/tx/${transactionSignature}`
-    );
+
+    if(network === "mainnet"){
+      console.log(
+        "Transaction Signature: ",
+        `https://solscan.io/tx/${transactionSignature}`
+      );
+    } else {
+      console.log(
+        "Transaction Signature: ",
+        `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
+      );
+    }
+    
   } catch (error) {
     console.error("Transaction failed", error);
   }
+}
 
-  
-  // console.log(
-  //   "Transaction Signature: ",
-  //   `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
-  // );
-})();
+transferSplToken();
