@@ -13,6 +13,7 @@ import {
 import {
   createMint,
   getOrCreateAssociatedTokenAccount,
+  getAssociatedTokenAddressSync,
   mintTo,
   createTransferInstruction,
 } from "@solana/spl-token";
@@ -58,17 +59,13 @@ const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // D
   // );
 
   // Get the token account of the fromWall address, if it doesn't exist, create it
-  const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
-    connection,
-    fromWallet,
+  const fromTokenAccount = getAssociatedTokenAddressSync(
     mint,
     fromWallet.publicKey
   );
 
   //get the token account of the toWallet address, if it does not exist, create it
-  const toTokenAccount = await getOrCreateAssociatedTokenAccount(
-    connection,
-    fromWallet,
+  const toTokenAccount = getAssociatedTokenAddressSync(
     mint,
     toWalletPublicKey,
   );
@@ -87,8 +84,8 @@ const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // D
   // // Add token transfer instructions to transaction
   const transaction = new Transaction().add(
     createTransferInstruction(
-      fromTokenAccount.address,
-      toTokenAccount.address,
+      fromTokenAccount,
+      toTokenAccount,
       fromWallet.publicKey,
       1000000 * LAMPORTS_PER_SOL
     )
