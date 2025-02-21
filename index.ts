@@ -9,6 +9,9 @@ import {
   Connection,
   PublicKey,
   clusterApiUrl,
+  ComputeBudgetProgram,
+  TransactionMessage,
+  VersionedTransaction
 } from "@solana/web3.js";
 import {
   createMint,
@@ -115,27 +118,61 @@ const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // M
   //   []
   // );
 
-  // // Add token transfer instructions to transaction
-  const transaction = new Transaction().add(
-    createTransferInstruction(
-      fromTokenAccount.address,
-      toTokenAccount.address,
-      fromWallet.publicKey,
-      transferAmount * Math.pow(10, mintInfo.decimals)
-    )
+  const transferInstruction = createTransferInstruction(
+    fromTokenAccount.address,
+    toTokenAccount.address,
+    fromWallet.publicKey,
+    transferAmount * Math.pow(10, mintInfo.decimals)
   );
 
-  // // Sign transaction, broadcast, and confirm
-  const transactionSignature = await sendAndConfirmTransaction(
-    connection,
-    transaction,
-    [fromWallet]
-  );
+  // Add priority fee instruction
+  const PRIORITY_FEE_MICRO_LAMPORTS = 100000; // 0.1 lamports per compute unit (adjust as needed)
+  // Instruction to set the compute unit price for priority fee
+  const PRIORITY_FEE_INSTRUCTIONS = ComputeBudgetProgram.setComputeUnitPrice({microLamports: PRIORITY_FEE_MICRO_LAMPORTS});
 
-  console.log(
-    "Transaction Signature: ",
-    `https://solscan.io/tx/${transactionSignature}`
-  );
+  // Fetch a fresh blockhash
+  const latestBlockhash = await connection.getLatestBlockhash();
+  
+  const messageV0 = new TransactionMessage({
+    payerKey: fromWallet.publicKey,
+    recentBlockhash: latestBlockhash.blockhash,
+    instructions: [PRIORITY_FEE_INSTRUCTIONS, transferInstruction],
+  }).compileToV0Message();
+  
+  const versionedTransaction = new VersionedTransaction(messageV0);
+  
+  // Sign transaction, broadcast, and confirm
+  versionedTransaction.sign([fromWallet]);
+
+  // Attempts to send the transaction to the network, handling success or failure.
+  try {
+    const transactionSignature = await connection.sendTransaction(versionedTransaction, {
+      maxRetries: 20,
+    });
+    console.log(
+      "Transaction Signature: ",
+      `https://solscan.io/tx/${transactionSignature}`
+    );
+
+    const confirmation = await connection.confirmTransaction(
+      {
+        signature: transactionSignature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      },
+      "confirmed"
+    );
+    if (confirmation.value.err) {
+      throw new Error("🚨Transaction not confirmed.");
+    }
+    console.log(
+      `Transaction Successfully Confirmed! 🎉 View on SolScan: https://solscan.io/tx/${transactionSignature}`
+    );
+  } catch (error) {
+    console.error("Transaction failed", error);
+  }
+
+  
   // console.log(
   //   "Transaction Signature: ",
   //   `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
