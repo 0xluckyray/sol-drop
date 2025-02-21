@@ -10,67 +10,99 @@ import {
   PublicKey,
   clusterApiUrl,
 } from "@solana/web3.js";
+import {
+  createMint,
+  getOrCreateAssociatedTokenAccount,
+  mintTo,
+  createTransferInstruction,
+} from "@solana/spl-token";
 
 dotenv.config();
 
-// Key from .env
-const senderPrivateKeyString = process.env.SENDER_WALLET_PRIVATE_KEY as string;
+// Keys from .env
+const fromWalletPrivateKeyString = process.env
+  .SENDER_WALLET_PRIVATE_KEY as string;
 const receiverPublicKeyString = process.env
   .RECEIVER_WALLET_PUBLIC_KEY as string;
 
-// Get sender Keypair
-// const senderSecretKey = JSON.parse(fs.readFileSync('sender-keypair.json', 'utf-8')) as number[];
-// const sender = Keypair.fromSecretKey(new Uint8Array(senderSecretKey));
-const senderSecretKey = bs58.decode(senderPrivateKeyString);
-const sender = Keypair.fromSecretKey(senderSecretKey);
+const fromWallet = Keypair.fromSecretKey(bs58.decode(fromWalletPrivateKeyString));
+const toWalletPublicKey = new PublicKey(receiverPublicKeyString);
 
-// Get receiver public key
-const receiverPublicKey = new PublicKey(receiverPublicKeyString);
+//Token Mint Account Address
+const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // Devnet
 
-// transferSOL function
-async function transferSOL(network: string = "mainnet") {
-  let connection: Connection;
-  if (network === "mainnet") {
-    connection = new Connection("https://api.mainnet-beta.solana.com");
-  } else {
-    connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+(async () => {
+  const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+  // const connection = new Connection("https://api.mainnet-bet.solana.com");
 
-    // Airdrop some SOL to the sender's wallet for testing
-    const airdropSignature = await connection.requestAirdrop(
-      sender.publicKey,
-      2 * LAMPORTS_PER_SOL
-    );
+  // Generate a wallet keypair and airdrop SOL
+  // const fromWallet = Keypair.generate();
+  // const airdropSignature = await connection.requestAirdrop(
+  //   fromWallet.publicKey,
+  //   LAMPORTS_PER_SOL
+  // );
 
-    // Wait for the airdrop to be confirmed
-    await connection.confirmTransaction(airdropSignature);
-  }
+  // Wait for airdrop cofirmation
+  // await connection.confirmTransaction(airdropSignature);
 
-  const trasnferInstruction = SystemProgram.transfer({
-    fromPubkey: sender.publicKey,
-    toPubkey: receiverPublicKey,
-    lamports: 0.01 * LAMPORTS_PER_SOL,
-  });
+  // Generate a wallet keypair to receive newly minted token
+  // const toWallet = Keypair.generate();
 
-  const transaction = new Transaction().add(trasnferInstruction);
+  // Create new token mint
+  // const mint = await createMint(
+  //   connection,
+  //   fromWallet,
+  //   fromWallet.publicKey,
+  //   null,
+  //   9
+  // );
 
+  // Get the token account of the fromWall address, if it doesn't exist, create it
+  const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
+    connection,
+    fromWallet,
+    mint,
+    fromWallet.publicKey
+  );
+
+  //get the token account of the toWallet address, if it does not exist, create it
+  const toTokenAccount = await getOrCreateAssociatedTokenAccount(
+    connection,
+    fromWallet,
+    mint,
+    toWalletPublicKey,
+  );
+
+  // // Minting 1000 000 000 tokens to the fromTokenAccount we just returned/created
+  // await mintTo(
+  //   connection,
+  //   fromWallet,
+  //   mint,
+  //   fromTokenAccount.address,
+  //   fromWallet.publicKey,
+  //   1000000000 * LAMPORTS_PER_SOL, // it's 1 token, but in lamports
+  //   []
+  // );
+
+  // // Add token transfer instructions to transaction
+  const transaction = new Transaction().add(
+    createTransferInstruction(
+      fromTokenAccount.address,
+      toTokenAccount.address,
+      fromWallet.publicKey,
+      1000000 * LAMPORTS_PER_SOL
+    )
+  );
+
+  // // Sign transaction, broadcast, and confirm
   const transactionSignature = await sendAndConfirmTransaction(
     connection,
     transaction,
-    [sender]
+    [fromWallet]
   );
 
-  if(network === "mainnet"){
-    console.log(
-      "Transaction Signature: ",
-      `https://solscan.io/tx/${transactionSignature}`
-    );
-  } else {
-    console.log(
-      "Transaction Signature: ",
-      `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
-    );
-  }
-
-}
-
-transferSOL("devnet");
+  console.log(
+    "Transaction Signature: ",
+    `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
+  );
+})();
