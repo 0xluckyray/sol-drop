@@ -79,13 +79,17 @@ const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // M
   console.log("Token Decimals:", mintInfo.decimals);
 
   // Get the token account of the fromWall address, if it doesn't exist, create it
-  const fromTokenAccount = getAssociatedTokenAddressSync(
+  const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
+    connection,
+    fromWallet,
     mint,
     fromWallet.publicKey
   );
 
   //get the token account of the toWallet address, if it does not exist, create it
-  const toTokenAccount = getAssociatedTokenAddressSync(
+  const toTokenAccount = await getOrCreateAssociatedTokenAccount(
+    connection,
+    fromWallet,
     mint,
     toWalletPublicKey,
   );
@@ -114,8 +118,8 @@ const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // M
   // // Add token transfer instructions to transaction
   const transaction = new Transaction().add(
     createTransferInstruction(
-      fromTokenAccount,
-      toTokenAccount,
+      fromTokenAccount.address,
+      toTokenAccount.address,
       fromWallet.publicKey,
       transferAmount * Math.pow(10, mintInfo.decimals)
     )
