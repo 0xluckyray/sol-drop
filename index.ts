@@ -14,7 +14,9 @@ import {
   createMint,
   getOrCreateAssociatedTokenAccount,
   mintTo,
+  getMint,
   createTransferInstruction,
+  TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
 dotenv.config();
@@ -29,11 +31,20 @@ const fromWallet = Keypair.fromSecretKey(bs58.decode(fromWalletPrivateKeyString)
 const toWalletPublicKey = new PublicKey(receiverPublicKeyString);
 
 //Token Mint Account Address
-const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // Devnet
+// const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // Devnet
+const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // Mainnet
 
 (async () => {
-  const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-  // const connection = new Connection("https://api.mainnet-bet.solana.com");
+  // const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+  const connection = new Connection("https://api.mainnet-beta.solana.com");
+
+  // Check fromWallet balance
+  const fromWalletBalance = await connection.getBalance(fromWallet.publicKey);
+  console.log("From Wallet Balance:", fromWalletBalance / LAMPORTS_PER_SOL, "SOL");
+
+  if (fromWalletBalance < 0.01 * LAMPORTS_PER_SOL) {
+    throw new Error("From wallet does not have enough SOL to pay for transaction fees.");
+  }
 
   // Generate a wallet keypair and airdrop SOL
   // const fromWallet = Keypair.generate();
@@ -57,6 +68,15 @@ const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // D
   //   9
   // );
 
+  // Get token mint info (including decimals)
+  const mintInfo = await getMint(
+    connection,
+    mint,
+    "confirmed",
+    TOKEN_PROGRAM_ID,
+  );
+  console.log("Token Decimals:", mintInfo.decimals);
+
   // Get the token account of the fromWall address, if it doesn't exist, create it
   const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
     connection,
@@ -72,6 +92,16 @@ const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // D
     mint,
     toWalletPublicKey,
   );
+
+  // Check the balance of the fromTokenAccount
+  const fromTokenAccountBalance = await connection.getTokenAccountBalance(fromTokenAccount.address);
+  console.log("From Token Account Balance:", fromTokenAccountBalance.value.uiAmount, "tokens");
+
+  // Ensure the fromTokenAccount has enough tokens for the transfer
+  const transferAmount = 50; // Adjust this value based on the token's decimals
+  if (fromTokenAccountBalance.value.uiAmount === null || fromTokenAccountBalance.value.uiAmount < transferAmount) {
+    throw new Error("Insufficient funds in the fromTokenAccount.");
+  }
 
   // // Minting 1000 000 000 tokens to the fromTokenAccount we just returned/created
   // await mintTo(
@@ -90,7 +120,7 @@ const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // D
       fromTokenAccount.address,
       toTokenAccount.address,
       fromWallet.publicKey,
-      1000000 * LAMPORTS_PER_SOL
+      transferAmount * Math.pow(10, mintInfo.decimals)
     )
   );
 
@@ -103,6 +133,10 @@ const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // D
 
   console.log(
     "Transaction Signature: ",
-    `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
+    `https://solscan.io/tx/${transactionSignature}`
   );
+  // console.log(
+  //   "Transaction Signature: ",
+  //   `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
+  // );
 })();
