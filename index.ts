@@ -11,7 +11,8 @@ import {
   clusterApiUrl,
   ComputeBudgetProgram,
   TransactionMessage,
-  VersionedTransaction
+  VersionedTransaction,
+  TransactionInstruction
 } from "@solana/web3.js";
 import {
   createMint,
@@ -39,15 +40,8 @@ const receiverPublicKeyString = process.env
 const fromWallet = Keypair.fromSecretKey(bs58.decode(fromWalletPrivateKeyString));
 const toWalletPublicKey = new PublicKey(receiverPublicKeyString);
 
-//Token Mint Account Address
-// const mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // Devnet
-// const mint = new PublicKey("13pkrcqF47rF2oF4kZnBVzH5omQ2f7nF429vzpjgL896"); // Devnet Token2022 SPL Token
-
-// const mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // Mainnet
-const mint = new PublicKey("HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC"); // Mainnet Token2022 SPL Token
-
 // transferSplToken function
-async function transferSplToken(network: string = "mainnet") {
+async function transferSplToken(mint:PublicKey, transferAmount: number, network: string = "mainnet") {
   let connection: Connection;
   if (network === "mainnet") {
     connection = new Connection("https://api.mainnet-beta.solana.com");
@@ -62,16 +56,18 @@ async function transferSplToken(network: string = "mainnet") {
     throw new Error("From wallet does not have enough SOL to pay for transaction fees.");
   }
   
+  const accountInfo = await connection.getAccountInfo(mint);
+  const tokenProgramID = accountInfo?.owner;
+  console.log("Token ProgramID", tokenProgramID);
 
   // Get token mint info (including decimals)
   const mintInfo = await getMint(
     connection,
     mint,
     "confirmed",
-    // TOKEN_PROGRAM_ID,
-    TOKEN_2022_PROGRAM_ID,
+    tokenProgramID // TOKEN_PROGRAM_ID or TOKEN_2022_PROGRAM_ID
   );
-  console.log("Token Decimals:", mintInfo.decimals);
+  console.log("Token Decimals:", mintInfo);
 
   console.log("ASSOCIATED_TOKEN_PROGRAM_ID: ", ASSOCIATED_TOKEN_PROGRAM_ID);
 
@@ -84,7 +80,7 @@ async function transferSplToken(network: string = "mainnet") {
     false,
     undefined,
     undefined,
-    TOKEN_2022_PROGRAM_ID,
+    tokenProgramID, // TOKEN_PROGRAM_ID or TOKEN_2022_PROGRAM_ID
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
 
@@ -97,7 +93,7 @@ async function transferSplToken(network: string = "mainnet") {
     false,
     undefined,
     undefined,
-    TOKEN_2022_PROGRAM_ID,
+    tokenProgramID, // TOKEN_PROGRAM_ID or TOKEN_2022_PROGRAM_ID
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
 
@@ -108,31 +104,34 @@ async function transferSplToken(network: string = "mainnet") {
   console.log("From Token Account Balance:", fromTokenAccountBalance.value.uiAmount, "tokens");
   
   // Ensure the fromTokenAccount has enough tokens for the transfer
-  const transferAmount = 0.1; // Adjust this value based on the token's decimals
+  // const transferAmount = 0.1; // Adjust this value based on the token's decimals
   if (fromTokenAccountBalance.value.uiAmount === null || fromTokenAccountBalance.value.uiAmount < transferAmount) {
     throw new Error("Insufficient funds in the fromTokenAccount.");
   }
 
-  console.log(  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, TOKEN_2022_PROGRAM_ID", TOKEN_2022_PROGRAM_ID);
+  // // Token Transfer Instruction
+  let transferInstruction: TransactionInstruction;
 
-
-  // Token Transfer Instruction
-  const transferInstruction = createTransferCheckedInstruction(
-    fromTokenAccount.address,
-    mint,
-    toTokenAccount.address,
-    fromWallet.publicKey,
-    new BN(transferAmount * Math.pow(10, mintInfo.decimals)),
-    mintInfo.decimals,
-    [],
-    TOKEN_2022_PROGRAM_ID
-  );
-  // const transferInstruction = createTransferInstruction(
-  //   fromTokenAccount,
-  //   toTokenAccount,
-  //   fromWallet.publicKey,
-  //   transferAmount * Math.pow(10, mintInfo.decimals)
-  // );
+  if(String(tokenProgramID) == String(TOKEN_PROGRAM_ID)){
+    transferInstruction = createTransferInstruction(
+      fromTokenAccount.address,
+      toTokenAccount.address,
+      fromWallet.publicKey,
+      transferAmount * Math.pow(10, mintInfo.decimals)
+    );
+  } else { 
+    //tokenProgramID == TOKEN_2022_PROGRAM_ID
+    transferInstruction = createTransferCheckedInstruction(
+      fromTokenAccount.address,
+      mint,
+      toTokenAccount.address,
+      fromWallet.publicKey,
+      new BN(transferAmount * Math.pow(10, mintInfo.decimals)),
+      mintInfo.decimals,
+      [],
+      TOKEN_2022_PROGRAM_ID
+    );
+  }
 
   // Priority fee instruction
   const PRIORITY_FEE_MICRO_LAMPORTS = 200000; // 0.2 lamports per compute unit (adjust as needed)
@@ -189,4 +188,16 @@ async function transferSplToken(network: string = "mainnet") {
   }
 }
 
-transferSplToken();
+// Test
+let mint: PublicKey;  // Mint Account Address (Token Address)
+mint = new PublicKey("C8NEYcW7eoQsrQ7vqeiUTLFxwJQNHgj8LwSc3BUQx6YG"); // Devnet SPL Token
+transferSplToken(mint, 1000000, "devnet");
+
+mint = new PublicKey("13pkrcqF47rF2oF4kZnBVzH5omQ2f7nF429vzpjgL896"); // Devnet Token2022 SPL Token
+transferSplToken(mint, 1000000, "devnet");
+
+mint = new PublicKey("7WphEnjwKtWWMbb7eEVYeLDNN2jodCo871tVt8jHpump"); // Mainnet SPL Token
+transferSplToken(mint, 10, "mainnet");
+
+mint = new PublicKey("HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC"); // Mainnet Token2022 SPL Token
+transferSplToken(mint, 0.05, "mainnet");
